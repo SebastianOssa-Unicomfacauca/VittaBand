@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitaBand – Monitoreo de Salud</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-brand">
+            <svg class="brand-svg" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="none" stroke="#00d4aa" stroke-width="2"/>
+                <polyline points="6,16 10,16 12,11 14,21 16,14 18,18 20,16 26,16" fill="none" stroke="#00d4aa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="brand-text">VITA<strong>BAND</strong></span>
+        </div>
+        <div class="nav-links" id="navLinks"></div>
+        <div class="nav-session hidden" id="navSession">
+            <div class="session-info">
+                <div class="session-avatar">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="10" cy="7" r="3.5" stroke="#00d4aa" stroke-width="1.6"/>
+                        <path d="M3 17c0-3.314 3.134-6 7-6s7 2.686 7 6" stroke="#00d4aa" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="session-text">
+                    <span class="session-role" id="sessionLabel"></span>
+                    <span class="session-name" id="sessionName"></span>
+                </div>
+            </div>
+            <div class="divider-v"></div>
+            <button id="btnLogout" class="btn-logout-nav">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 15l4-5-4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M17 10H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M7 3H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                Salir
+            </button>
+        </div>
+    </nav>
+
+    <!-- LOGIN -->
+    <section id="sectionLogin" class="section auth-section">
+        <div class="auth-wrapper">
+            <div class="auth-hero">
+                <div class="hero-icon-wrap">
+                    <svg class="hero-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M40 68 C40 68 8 48 8 26 C8 16 16 8 26 8 C32 8 37 11 40 16 C43 11 48 8 54 8 C64 8 72 16 72 26 C72 48 40 68 40 68Z" fill="#fce4e4" stroke="#ef4444" stroke-width="2.5"/>
+                        <polyline points="18,38 24,38 27,30 33,46 37,36 41,42 45,38 58,38" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h1>Monitoreo<br><em>en tiempo real</em></h1>
+                <p>Visualiza tus signos vitales con precisión clínica desde cualquier dispositivo.</p>
+            </div>
+            <div class="auth-card">
+                <h2>Iniciar sesión</h2>
+                <p class="auth-sub">Bienvenido de vuelta</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Correo electrónico</label>
+                        <input type="email" id="loginEmail" placeholder="correo@ejemplo.com" autocomplete="email">
+                        <span class="error-msg" id="loginEmailError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Contraseña</label>
+                        <input type="password" id="loginPassword" placeholder="Tu contraseña" autocomplete="current-password">
+                        <span class="error-msg" id="loginPasswordError"></span>
+                    </div>
+                    <div id="loginGeneralError" class="error-msg general-error hidden"></div>
+                    <button type="submit" class="btn-submit">
+                        Ingresar
+                        <svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M4 10h12M11 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </form>
+                <p class="form-footer">¿No tienes cuenta? <a href="#" id="linkToRegister">Regístrate gratis</a></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- REGISTRO -->
+    <section id="sectionRegister" class="section auth-section hidden">
+        <div class="auth-wrapper">
+            <div class="auth-hero">
+                <div class="hero-icon-wrap">
+                    <svg class="hero-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M40 8 L68 20 L68 42 C68 56 55 68 40 72 C25 68 12 56 12 42 L12 20 Z" fill="#e0f2fe" stroke="#2563eb" stroke-width="2.5"/>
+                        <path d="M28 40 L36 48 L52 32" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h1>Tu salud,<br><em>protegida</em></h1>
+                <p>Crea tu cuenta y comienza a monitorear tus signos vitales de forma segura.</p>
+            </div>
+            <div class="auth-card">
+                <h2>Crear cuenta</h2>
+                <p class="auth-sub">Acceso gratuito</p>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="regName">Nombre completo</label>
+                        <input type="text" id="regName" placeholder="Tu nombre" autocomplete="name">
+                        <span class="error-msg" id="regNameError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Correo electrónico</label>
+                        <input type="email" id="regEmail" placeholder="correo@ejemplo.com" autocomplete="email">
+                        <span class="error-msg" id="regEmailError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Contraseña</label>
+                        <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                        <span class="error-msg" id="regPasswordError"></span>
+                    </div>
+                    <button type="submit" class="btn-submit">
+                        Crear cuenta
+                        <svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M4 10h12M11 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </form>
+                <div id="registerSuccess" class="success-msg hidden">
+                    <svg viewBox="0 0 20 20" fill="none" width="18" height="18" style="vertical-align:middle;margin-right:6px"><circle cx="10" cy="10" r="8" stroke="#10b981" stroke-width="2"/><path d="M6 10l3 3 5-5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    ¡Registro exitoso! Redirigiendo…
+                </div>
+                <p class="form-footer">¿Ya tienes cuenta? <a href="#" id="linkToLogin">Inicia sesión</a></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="sectionHome" class="section hidden">
+
+        <div class="dashboard-header">
+            <div class="dash-title-block">
+                <h2>Panel de monitoreo</h2>
+                <p>Bienvenido, <strong id="userNameDisplay"></strong></p>
+            </div>
+            <div class="live-badge">
+                <span class="live-dot"></span>
+                EN VIVO
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+
+            <!-- BPM -->
+            <div class="metric-card" id="bpmCard">
+                <div class="metric-header">
+                    <span class="metric-label">Frecuencia cardíaca</span>
+                    <svg class="metric-icon-svg" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 24 C14 24 2 16 2 9 C2 5.5 5 3 8.5 3 C10.5 3 12.2 4 14 6 C15.8 4 17.5 3 19.5 3 C23 3 26 5.5 26 9 C26 16 14 24 14 24Z" fill="#fce4e4" stroke="#ef4444" stroke-width="1.8"/>
+                        <polyline points="4,13 7,13 8.5,9.5 11,16.5 13,12 15,14.5 16.5,13 23,13" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="bpmValue">--</span>
+                    <span class="metric-unit">BPM</span>
+                </div>
+                <div class="metric-status" id="bpmStatus">
+                    <svg class="status-icon" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M8 5v3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <circle cx="8" cy="11" r="0.7" fill="currentColor"/>
+                    </svg>
+                    <span class="status-text">Esperando datos...</span>
+                </div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" id="bpmBar"></div>
+                </div>
+                <div class="alert-box hidden" id="bpmAlert">
+                    <svg viewBox="0 0 20 20" fill="none" width="16" height="16" style="flex-shrink:0">
+                        <path d="M10 2L19 18H1L10 2Z" stroke="#ef4444" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M10 8v4M10 14.5v.5" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    <span id="bpmAlertText"></span>
+                </div>
+            </div>
+
+            <!-- SpO2 -->
+            <div class="metric-card" id="spo2Card">
+                <div class="metric-header">
+                    <span class="metric-label">Oxigenación en sangre</span>
+                    <svg class="metric-icon-svg" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 5 L14 13" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M14 13 C10 13 6 14 5 18 C4 22 5 25 8 25.5 C11 26 12.5 23 12.5 20 L12.5 15" stroke="#2563eb" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="#dbeafe" fill-opacity="0.6"/>
+                        <path d="M14 13 C18 13 22 14 23 18 C24 22 23 25 20 25.5 C17 26 15.5 23 15.5 20 L15.5 15" stroke="#2563eb" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="#dbeafe" fill-opacity="0.6"/>
+                        <circle cx="14" cy="4" r="2" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+                    </svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="spo2Value">--</span>
+                    <span class="metric-unit">% SpO₂</span>
+                </div>
+                <div class="metric-status" id="spo2Status">
+                    <svg class="status-icon" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M8 5v3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <circle cx="8" cy="11" r="0.7" fill="currentColor"/>
+                    </svg>
+                    <span class="status-text">Esperando datos...</span>
+                </div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" id="spo2Bar"></div>
+                </div>
+                <div class="alert-box hidden" id="spo2Alert">
+                    <svg viewBox="0 0 20 20" fill="none" width="16" height="16" style="flex-shrink:0">
+                        <circle cx="10" cy="10" r="8" stroke="#ef4444" stroke-width="1.8"/>
+                        <path d="M10 6v5M10 13.5v.5" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    <span id="spo2AlertText"></span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Historial -->
+        <div class="history-card">
+            <div class="history-header">
+                <div class="history-title-row">
+                    <svg viewBox="0 0 22 22" fill="none" width="20" height="20">
+                        <rect x="2"  y="14" width="3" height="6" rx="1" fill="#64748b"/>
+                        <rect x="7"  y="10" width="3" height="10" rx="1" fill="#64748b"/>
+                        <rect x="12" y="6"  width="3" height="14" rx="1" fill="#64748b"/>
+                        <rect x="17" y="2"  width="3" height="18" rx="1" fill="#64748b"/>
+                    </svg>
+                    <h3>Historial de lecturas</h3>
+                </div>
+                <div class="history-legend">
+                    <span class="legend-item">
+                        <svg viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="4.5" fill="#ef4444"/></svg>
+                        BPM
+                    </span>
+                    <span class="legend-item">
+                        <svg viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="4.5" fill="#2563eb"/></svg>
+                        SpO₂
+                    </span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+
+    </section>
+
+    <script src="HU45_registro.js"></script>
+    <script src="HU46_login.js"></script>
+    <script src="HU01_BPM.js"></script>
+    <script src="HU02_SPO2.js"></script>
+</body>
+</html>
