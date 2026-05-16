@@ -7,7 +7,8 @@
  * actualiza la UI periódicamente y alerta cuando
  * SpO₂ cae por debajo de 50% (hipoxemia severa).
  */
-
+//esta es una mos=dificacion de prueba para git
+// version 1
 (function() {
     'use strict';
 
