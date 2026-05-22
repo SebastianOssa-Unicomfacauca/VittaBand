@@ -10,7 +10,7 @@
 kjngfijaijg
 (function() {
     'use strict';
-
+//holaaaaa
     // Referencias DOM
     const bpmValue = document.getElementById('bpmValue');
     const bpmStatus = document.getElementById('bpmStatus');
