@@ -10,7 +10,8 @@
 kjngfijaijg
 (function() {
     'use strict';
-
+//holaaaaa
+//Daniela
     // Referencias DOM
     const bpmValue = document.getElementById('bpmValue');
     const bpmStatus = document.getElementById('bpmStatus');
