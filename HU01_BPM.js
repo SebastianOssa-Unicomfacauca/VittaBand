@@ -1,6 +1,6 @@
 /**
  * ============================================
- * HU01 - VISUALIZAR BPM (Frecuencia Cardíaca)
+ * HU01 - VISUALIZAR BPM (Frecuencia Cardíaca).
  * ============================================
  * Maneja la visualización del BPM en tiempo real,
  * actualización automática y generación de alertas

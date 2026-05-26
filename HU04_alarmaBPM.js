@@ -2,7 +2,7 @@
 /**
  * ============================================
  * HU04 - ALARMA BPM (Frecuencia Cardíaca Crítica)
- * ============================================
+ * ============================/================
  * Detecta cuando el BPM está fuera de rango crítico
  * (menor a 30 o mayor a 220) y genera una alarma visual
  * inmediata con opción de simular notificación a familiares.
