@@ -1,6 +1,5 @@
 /**
  * ============================================
- * B6
  * HU01 - VISUALIZAR BPM (Frecuencia Cardíaca)
  * ============================================
  * Maneja la visualización del BPM en tiempo real,
@@ -290,7 +289,7 @@
     }
 
     /**
-     * Detiene la simulación automática de BPM .......
+     * Detiene la simulación automática de BPM
      */
     function stopBPMSimulation() {
         if (bpmInterval) {
@@ -314,7 +313,7 @@
         }
     }
 
-    // Exponer API global ...
+    // Exponer API global
     window.VitaMonitorBPM = {
         getCurrentBPM,
         getBPMHistory,
