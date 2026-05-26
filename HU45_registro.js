@@ -2,168 +2,306 @@
  * ============================================
  * HU45 - REGISTRO DE USUARIO
  * ============================================
- * Módulo encargado del registro de nuevos usuarios.
- * Valida campos, verifica formato de correo y almacena
- * credenciales en localStorage para simular backend.
+ * Maneja el formulario de registro, validación de datos
+ * y almacenamiento simulado en localStorage.
+ * 
+ * Criterios de aceptación:
+ * - Registrar nombre, correo y contraseña
+ * - Validar campos vacíos
+ * - Validar formato de correo
+ * - Guardar usuario en localStorage
+ * - Permitir luego iniciar sesión
  */
 
 (function() {
     'use strict';
 
     // Referencias DOM
-    const registerForm = document.getElementById('registerForm');
-    const regName = document.getElementById('regName');
-    const regEmail = document.getElementById('regEmail');
-    const regPassword = document.getElementById('regPassword');
-    
-    // Mensajes de error
-    const regNameError = document.getElementById('regNameError');
-    const regEmailError = document.getElementById('regEmailError');
-    const regPasswordError = document.getElementById('regPasswordError');
-    const registerSuccess = document.getElementById('registerSuccess');
-    
-    // Navegación
-    const linkToLogin = document.getElementById('linkToLogin');
+    const registerForm = document.getElementById('register-form');
+    const regNameInput = document.getElementById('reg-name');
+    const regEmailInput = document.getElementById('reg-email');
+    const regPasswordInput = document.getElementById('reg-password');
+    const showLoginLink = document.getElementById('show-login');
+
+    // Referencias a mensajes de error
+    const nameError = document.getElementById('reg-name-error');
+    const emailError = document.getElementById('reg-email-error');
+    const passwordError = document.getElementById('reg-password-error');
+
+    // ============================================
+    // VALIDACIONES
+    // ============================================
 
     /**
-     * Expresión regular para validar formato de correo electrónico
+     * Valida que el campo no esté vacío
+     * @param {string} value - Valor a validar
+     * @returns {boolean} - true si no está vacío
      */
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    function isNotEmpty(value) {
+        return value.trim().length > 0;
+    }
 
     /**
-     * Limpia todos los mensajes de error y estilos de validación
+     * Valida formato de correo electrónico
+     * @param {string} email - Correo a validar
+     * @returns {boolean} - true si el formato es válido
      */
-    function clearErrors() {
-        [regName, regEmail, regPassword].forEach(input => input.classList.remove('error'));
-        [regNameError, regEmailError, regPasswordError].forEach(el => el.textContent = '');
-        registerSuccess.classList.add('hidden');
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email.trim());
+    }
+
+    /**
+     * Valida longitud mínima de contraseña
+     * @param {string} password - Contraseña a validar
+     * @returns {boolean} - true si cumple longitud mínima
+     */
+    function isValidPassword(password) {
+        return password.length >= 6;
     }
 
     /**
      * Muestra mensaje de error en un campo específico
-     * @param {HTMLElement} input - Campo de entrada
-     * @param {HTMLElement} errorEl - Elemento donde mostrar el error
+     * @param {HTMLElement} input - Input con error
+     * @param {HTMLElement} errorElement - Elemento donde mostrar error
      * @param {string} message - Mensaje de error
      */
-    function showError(input, errorEl, message) {
+    function showFieldError(input, errorElement, message) {
         input.classList.add('error');
-        errorEl.textContent = message;
+        errorElement.textContent = message;
     }
 
     /**
-     * Valida todos los campos del formulario de registro
-     * @returns {boolean} - true si todos los campos son válidos
+     * Limpia el estado de error de un campo
+     * @param {HTMLElement} input - Input a limpiar
+     * @param {HTMLElement} errorElement - Elemento de error a limpiar
      */
-    function validateForm() {
-        clearErrors();
-        let isValid = true;
-
-        // Validar nombre: no vacío y mínimo 2 caracteres
-        const nameValue = regName.value.trim();
-        if (!nameValue) {
-            showError(regName, regNameError, 'El nombre es obligatorio');
-            isValid = false;
-        } else if (nameValue.length < 2) {
-            showError(regName, regNameError, 'El nombre debe tener al menos 2 caracteres');
-            isValid = false;
-        }
-
-        // Validar correo: no vacío y formato correcto
-        const emailValue = regEmail.value.trim();
-        if (!emailValue) {
-            showError(regEmail, regEmailError, 'El correo es obligatorio');
-            isValid = false;
-        } else if (!EMAIL_REGEX.test(emailValue)) {
-            showError(regEmail, regEmailError, 'Formato de correo inválido');
-            isValid = false;
-        }
-
-        // Validar contraseña: no vacía y mínimo 6 caracteres
-        const passwordValue = regPassword.value;
-        if (!passwordValue) {
-            showError(regPassword, regPasswordError, 'La contraseña es obligatoria');
-            isValid = false;
-        } else if (passwordValue.length < 6) {
-            showError(regPassword, regPasswordError, 'La contraseña debe tener al menos 6 caracteres');
-            isValid = false;
-        }
-
-        return isValid;
+    function clearFieldError(input, errorElement) {
+        input.classList.remove('error');
+        errorElement.textContent = '';
     }
 
     /**
-     * Verifica si el correo ya está registrado en localStorage
-     * @param {string} email - Correo a verificar
+     * Limpia todos los errores del formulario
+     */
+    function clearAllErrors() {
+        clearFieldError(regNameInput, nameError);
+        clearFieldError(regEmailInput, emailError);
+        clearFieldError(regPasswordInput, passwordError);
+    }
+
+    // ============================================
+    // ALMACENAMIENTO
+    // ============================================
+
+    /**
+     * Verifica si un usuario ya existe por correo
+     * @param {string} email - Correo a buscar
      * @returns {boolean} - true si ya existe
      */
-    function emailExists(email) {
-        const users = JSON.parse(localStorage.getItem('hm_users') || '[]');
-        return users.some(user => user.email.toLowerCase() === email.toLowerCase());
+    function userExists(email) {
+        try {
+            const users = JSON.parse(localStorage.getItem('vitamonitor_users')) || [];
+            return users.some(user => user.email === email.trim().toLowerCase());
+        } catch (error) {
+            console.error('Error al verificar usuario existente:', error);
+            return false;
+        }
     }
 
     /**
      * Guarda un nuevo usuario en localStorage
-     * @param {Object} userData - Datos del usuario {name, email, password}
+     * @param {Object} userData - Datos del usuario
+     * @returns {boolean} - true si se guardó correctamente
      */
     function saveUser(userData) {
-        const users = JSON.parse(localStorage.getItem('hm_users') || '[]');
-        users.push(userData);
-        localStorage.setItem('hm_users', JSON.stringify(users));
+        try {
+            const users = JSON.parse(localStorage.getItem('vitamonitor_users')) || [];
+
+            // Agregar nuevo usuario con ID y fecha de registro
+            const newUser = {
+                id: Date.now().toString(),
+                name: userData.name.trim(),
+                email: userData.email.trim().toLowerCase(),
+                password: userData.password, // En producción: usar hash
+                createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('vitamonitor_users', JSON.stringify(users));
+
+            return true;
+        } catch (error) {
+            console.error('Error al guardar usuario:', error);
+            return false;
+        }
     }
 
+    // ============================================
+    // NAVEGACIÓN ENTRE PANTALLAS
+    // ============================================
+
     /**
-     * Manejador del envío del formulario de registro
+     * Muestra la pantalla de login y oculta registro
      */
-    function handleRegister(event) {
+    function showLoginScreen() {
+        const registerScreen = document.getElementById('register-screen');
+        const loginScreen = document.getElementById('login-screen');
+
+        registerScreen.classList.add('hidden');
+        loginScreen.classList.remove('hidden');
+
+        // Limpiar formulario de registro
+        registerForm.reset();
+        clearAllErrors();
+    }
+
+    // ============================================
+    // MANEJADORES DE EVENTOS
+    // ============================================
+
+    /**
+     * Maneja el envío del formulario de registro
+     * @param {Event} event - Evento de submit
+     */
+    function handleRegisterSubmit(event) {
         event.preventDefault();
+        clearAllErrors();
 
-        if (!validateForm()) return;
+        const name = regNameInput.value;
+        const email = regEmailInput.value;
+        const password = regPasswordInput.value;
 
-        const userData = {
-            name: regName.value.trim(),
-            email: regEmail.value.trim().toLowerCase(),
-            password: regPassword.value,
-            createdAt: new Date().toISOString()
-        };
+        let hasErrors = false;
 
-        // Verificar si el correo ya está registrado
-        if (emailExists(userData.email)) {
-            showError(regEmail, regEmailError, 'Este correo ya está registrado');
+        // Validar nombre
+        if (!isNotEmpty(name)) {
+            showFieldError(regNameInput, nameError, 'El nombre es obligatorio');
+            hasErrors = true;
+        }
+
+        // Validar correo
+        if (!isNotEmpty(email)) {
+            showFieldError(regEmailInput, emailError, 'El correo es obligatorio');
+            hasErrors = true;
+        } else if (!isValidEmail(email)) {
+            showFieldError(regEmailInput, emailError, 'Ingresa un correo válido');
+            hasErrors = true;
+        } else if (userExists(email)) {
+            showFieldError(regEmailInput, emailError, 'Este correo ya está registrado');
+            hasErrors = true;
+        }
+
+        // Validar contraseña
+        if (!isNotEmpty(password)) {
+            showFieldError(regPasswordInput, passwordError, 'La contraseña es obligatoria');
+            hasErrors = true;
+        } else if (!isValidPassword(password)) {
+            showFieldError(regPasswordInput, passwordError, 'Mínimo 6 caracteres');
+            hasErrors = true;
+        }
+
+        // Si hay errores, detener
+        if (hasErrors) {
             return;
         }
 
-        // Guardar usuario y mostrar éxito
-        try {
-            saveUser(userData);
-            registerForm.reset();
-            registerSuccess.classList.remove('hidden');
-            
-            // Redirigir al login después de 2 segundos
+        // Guardar usuario
+        const success = saveUser({ name, email, password });
+
+        if (success) {
+            // Mostrar mensaje de éxito y redirigir a login
+            showToast('Registro exitoso. Ahora puedes iniciar sesión.', 'success');
             setTimeout(() => {
-                document.getElementById('sectionRegister').classList.add('hidden');
-                document.getElementById('sectionLogin').classList.remove('hidden');
-                registerSuccess.classList.add('hidden');
-            }, 2000);
-        } catch (error) {
-            console.error('Error al guardar usuario:', error);
-            alert('Ocurrió un error al registrar. Intenta de nuevo.');
+                showLoginScreen();
+            }, 1500);
+        } else {
+            showToast('Error al registrar. Intenta de nuevo.', 'error');
         }
     }
 
-    // Event Listeners
-    registerForm.addEventListener('submit', handleRegister);
+    /**
+     * Maneja la visualización de contraseña
+     * @param {Event} event - Evento de click
+     */
+    function handleTogglePassword(event) {
+        const button = event.currentTarget;
+        const targetId = button.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        const icon = button.querySelector('i');
 
-    // Limpiar errores al escribir
-    [regName, regEmail, regPassword].forEach(input => {
-        input.addEventListener('input', clearErrors);
-    });
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+
+    // Evento de registro
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegisterSubmit);
+    }
 
     // Navegación a login
-    linkToLogin.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('sectionRegister').classList.add('hidden');
-        document.getElementById('sectionLogin').classList.remove('hidden');
-        clearErrors();
+    if (showLoginLink) {
+        showLoginLink.addEventListener('click', function(event) {
+            event.preventDefault();
+            showLoginScreen();
+        });
+    }
+
+    // Toggle de contraseña
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', handleTogglePassword);
     });
+
+    // Limpiar errores al escribir
+    [regNameInput, regEmailInput, regPasswordInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                this.classList.remove('error');
+                const errorEl = document.getElementById(this.id + '-error');
+                if (errorEl) errorEl.textContent = '';
+            });
+        }
+    });
+
+    // ============================================
+    // FUNCIÓN GLOBAL DE TOAST (compartida)
+    // ============================================
+    window.showToast = function(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+
+        const icons = {
+            success: 'fa-circle-check',
+            error: 'fa-circle-xmark',
+            info: 'fa-circle-info'
+        };
+
+        toast.innerHTML = `
+            <i class="fa-solid ${icons[type] || icons.info}"></i>
+            <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(30px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
 
 })();
