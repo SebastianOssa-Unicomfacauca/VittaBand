@@ -1,227 +1,318 @@
 /**
  * ============================================
- * HU02 - VISUALIZACIÓN SpO₂ (Oxigenación)
+ * HU02 - VISUALIZAR SpO₂ (Saturación de Oxígeno)
  * ============================================
- * Módulo que simula la lectura de SpO₂ en tiempo real.
- * Genera valores realistas de saturación de oxígeno,
- * actualiza la UI periódicamente y alerta cuando
- * SpO₂ cae por debajo de 50% (hipoxemia severa).
+ * Maneja la visualización de SpO₂ en tiempo real,
+ * actualización automática y generación de alertas
+ * cuando el valor está fuera de rango.
+ * 
+ * Criterios de aceptación:
+ * - Mostrar SpO₂ en tiempo real
+ * - Actualización automática
+ * - Si SpO₂ < 50: generar alerta
  */
-//esta es una mos=dificacion de prueba para git
-// version 1
-// segunda modificacion para git
-// tercera mod desde git hub
+
 (function() {
     'use strict';
 
-    // Referencias DOM
-    const spo2Value = document.getElementById('spo2Value');
-    const spo2Status = document.getElementById('spo2Status');
-    const spo2Bar = document.getElementById('spo2Bar');
-    const spo2Card = document.getElementById('spo2Card');
-    const spo2Alert = document.getElementById('spo2Alert');
-    const spo2AlertText = document.getElementById('spo2AlertText');
+    // ============================================
+    // CONFIGURACIÓN
+    // ============================================
 
-    // Estado del módulo
-    let spo2Interval = null;
-    let isRunning = false;
+    const SPO2_CONFIG = {
+        MIN_NORMAL: 95,
+        MAX_NORMAL: 100,
+        MIN_WARNING: 90,
+        MIN_CRITICAL: 50,
+        UPDATE_INTERVAL: 2500, // ms entre actualizaciones
+        HISTORY_LENGTH: 20      // Cantidad de valores históricos
+    };
+
+    // ============================================
+    // ESTADO
+    // ============================================
+
+    let currentSpO2 = 98;
     let spo2History = [];
+    let spo2Interval = null;
 
-    // Constantes de configuración
-    const UPDATE_INTERVAL = 1500; // 1.5 segundos (ligeramente diferente a BPM para no sincronizar)
-    const MIN_NORMAL_SPO2 = 95;
-    const MIN_WARNING_SPO2 = 90;
-    const MIN_ALERT_SPO2 = 50;   // Alerta crítica si SpO₂ < 50%
-    const HISTORY_MAX_POINTS = 20;
+    // ============================================
+    // REFERENCIAS DOM
+    // ============================================
+
+    const spo2ValueEl = document.getElementById('spo2-value');
+    const spo2StatusEl = document.getElementById('spo2-status');
+    const spo2CardEl = document.getElementById('spo2-card');
+    const spo2ChartEl = document.getElementById('spo2-chart');
+
+    // ============================================
+    // SIMULACIÓN DE SENSOR SpO₂
+    // ============================================
 
     /**
-     * Genera un valor de SpO₂ simulado
-     * Valores normales: 95-100%
-     * Ocasionalmente genera valores bajos para probar alertas
-     * @returns {number} - Valor SpO₂ entero
+     * Genera un valor SpO₂ aleatorio realista
+     * Normalmente entre 95-100%, con baja probabilidad de valores críticos
+     * @returns {number} - Valor SpO₂ simulado
      */
-    function generateSpO2() {
-        const isCritical = Math.random() < 0.03; // 3% probabilidad de valor crítico
-        
-        let spo2;
+    function simulateSpO2Reading() {
+        // 95% de probabilidad: valor normal (90-100%)
+        // 5% de probabilidad: valor crítico para demostración
+        const isCritical = Math.random() < 0.05;
+
         if (isCritical) {
-            // Valor crítico: 30-49%
-            spo2 = Math.floor(Math.random() * 20) + 30;
-        } else {
-            // Valor normal o levemente bajo
-            const base = 97;
-            const variation = (Math.random() - 0.5) * 10; // ±5%
-            spo2 = Math.round(base + variation);
+            // Generar valor crítico (muy bajo)
+            return Math.floor(Math.random() * 45) + 5; // 5-50%
         }
 
-        return Math.min(100, Math.max(0, spo2));
+        // Valor normal con pequeña variación
+        const baseSpO2 = 98;
+        const variation = (Math.random() - 0.5) * 6; // ±3%
+        const dip = Math.random() < 0.15 ? -(Math.random() * 5) : 0; // Ocasional pequeña caída
+
+        let spo2 = Math.round((baseSpO2 + variation + dip) * 10) / 10;
+
+        // Asegurar que esté en rango razonable si no es crítico
+        spo2 = Math.max(55, Math.min(100, spo2));
+
+        return spo2;
     }
 
+    // ============================================
+    // ACTUALIZACIÓN DE UI
+    // ============================================
+
     /**
-     * Determina el estado del SpO₂ y el mensaje correspondiente
-     * @param {number} spo2 - Valor actual de SpO₂
-     * @returns {Object} - {status, cssClass, message}
+     * Determina el estado del SpO₂ según su valor
+     * @param {number} spo2 - Valor de SpO₂
+     * @returns {string} - Estado: 'normal', 'warning', 'danger'
      */
     function getSpO2Status(spo2) {
-        if (spo2 < MIN_ALERT_SPO2) {
-            return {
-                status: 'danger',
-                cssClass: 'status-danger',
-                message: '🚨 Hipoxemia severa - ¡Emergencia médica!'
-            };
+        if (spo2 < SPO2_CONFIG.MIN_CRITICAL) {
+            return 'danger';
         }
-        if (spo2 < MIN_WARNING_SPO2) {
-            return {
-                status: 'warning',
-                cssClass: 'status-warning',
-                message: '⚠️ Hipoxemia moderada'
-            };
+        if (spo2 < SPO2_CONFIG.MIN_WARNING) {
+            return 'warning';
         }
-        if (spo2 < MIN_NORMAL_SPO2) {
-            return {
-                status: 'warning',
-                cssClass: 'status-warning',
-                message: '⚡ SpO₂ ligeramente baja'
-            };
-        }
-        return {
-            status: 'normal',
-            cssClass: 'status-normal',
-            message: '✅ Oxigenación normal'
-        };
+        return 'normal';
     }
 
     /**
-     * Calcula el porcentaje para la barra visual
-     * @param {number} spo2 - Valor actual
-     * @returns {number} - Porcentaje (0-100)
-     */
-    function calculateBarPercentage(spo2) {
-        return spo2; // SpO₂ ya es un porcentaje
-    }
-
-    /**
-     * Obtiene color para la barra según el estado
+     * Obtiene el texto descriptivo del estado
      * @param {string} status - Estado del SpO₂
-     * @returns {string} - Color CSS
+     * @returns {string} - Texto descriptivo
      */
-    function getBarColor(status) {
-        const colors = {
-            normal: '#10b981',   // verde
-            warning: '#f59e0b',  // amarillo
-            danger: '#ef4444'    // rojo
+    function getSpO2StatusText(status) {
+        const texts = {
+            normal: 'Normal',
+            warning: 'Bajo',
+            danger: '¡Crítico!'
         };
-        return colors[status] || colors.normal;
+        return texts[status] || 'Desconocido';
     }
 
     /**
-     * Actualiza la interfaz de usuario con el nuevo valor de SpO₂
-     * @param {number} spo2 - Valor actual
+     * Actualiza la tarjeta de SpO₂ en el DOM
+     * @param {number} spo2 - Valor actual de SpO₂
      */
-    function updateSpO2UI(spo2) {
-        const statusInfo = getSpO2Status(spo2);
-        
-        // Actualizar valor numérico
-        spo2Value.textContent = spo2;
-        
-        // Actualizar estado textual
-        spo2Status.textContent = statusInfo.message;
-        spo2Status.className = 'metric-status ' + statusInfo.cssClass;
-        
-        // Actualizar barra visual
-        spo2Bar.style.width = calculateBarPercentage(spo2) + '%';
-        spo2Bar.style.backgroundColor = getBarColor(statusInfo.status);
-        
-        // Manejar alertas visuales
-        if (statusInfo.status === 'danger') {
-            spo2Card.classList.add('alert');
-            spo2Alert.classList.remove('hidden');
-            spo2AlertText.textContent = statusInfo.message;
-        } else {
-            spo2Card.classList.remove('alert');
-            spo2Alert.classList.add('hidden');
+    function updateSpO2Display(spo2) {
+        if (!spo2ValueEl) return;
+
+        // Animar el cambio de valor
+        animateValueChange(spo2ValueEl, parseFloat(spo2ValueEl.textContent) || 98, spo2, 500);
+
+        // Actualizar estado visual
+        const status = getSpO2Status(spo2);
+        updateSpO2StatusDisplay(status);
+
+        // Actualizar historial y mini chart
+        addSpO2ToHistory(spo2);
+        updateSpO2MiniChart();
+    }
+
+    /**
+     * Actualiza el indicador de estado visual
+     * @param {string} status - Estado actual
+     */
+    function updateSpO2StatusDisplay(status) {
+        if (!spo2StatusEl || !spo2CardEl) return;
+
+        const badge = spo2StatusEl.querySelector('.status-badge');
+        if (badge) {
+            badge.className = `status-badge ${status}`;
+            badge.textContent = getSpO2StatusText(status);
         }
 
-        // Guardar en historial
-        spo2History.push({ value: spo2, timestamp: Date.now() });
-        if (spo2History.length > HISTORY_MAX_POINTS) {
+        // Actualizar clase de la tarjeta para el borde superior
+        spo2CardEl.classList.remove('normal', 'warning', 'danger');
+        spo2CardEl.classList.add(status);
+    }
+
+    /**
+     * Agrega un valor al historial de SpO₂
+     * @param {number} spo2 - Valor a agregar
+     */
+    function addSpO2ToHistory(spo2) {
+        spo2History.push({
+            value: spo2,
+            timestamp: Date.now()
+        });
+
+        // Mantener solo los últimos N valores
+        if (spo2History.length > SPO2_CONFIG.HISTORY_LENGTH) {
             spo2History.shift();
         }
-
-        // Actualizar gráfico
-        updateSpO2Chart();
     }
 
     /**
-     * Ciclo principal: genera y muestra nuevo valor de SpO₂
+     * Actualiza el mini chart de barras en la tarjeta SpO₂
      */
-    function spo2Tick() {
-        const currentSpO2 = generateSpO2();
-        updateSpO2UI(currentSpO2);
+    function updateSpO2MiniChart() {
+        if (!spo2ChartEl) return;
+
+        // Limpiar chart actual
+        spo2ChartEl.innerHTML = '';
+
+        // Crear barras para cada valor histórico
+        spo2History.forEach((data) => {
+            const bar = document.createElement('div');
+            bar.className = 'mini-bar';
+
+            // Altura proporcional al valor (escala: 50-100% -> 10%-100%)
+            const heightPercent = Math.max(10, Math.min(100, 
+                ((data.value - 50) / (100 - 50)) * 100
+            ));
+
+            bar.style.height = `${heightPercent}%`;
+
+            // Color según estado
+            const status = getSpO2Status(data.value);
+            const colors = {
+                normal: '#10b981',
+                warning: '#f59e0b',
+                danger: '#ef4444'
+            };
+            bar.style.backgroundColor = colors[status];
+
+            spo2ChartEl.appendChild(bar);
+        });
     }
 
     /**
-     * Inicia la simulación de lecturas de SpO₂
+     * Anima el cambio de un valor numérico
+     * @param {HTMLElement} element - Elemento a animar
+     * @param {number} start - Valor inicial
+     * @param {number} end - Valor final
+     * @param {number} duration - Duración en ms
      */
-    function startSpO2() {
-        if (isRunning) return;
-        
-        isRunning = true;
-        spo2Tick(); // Primera lectura inmediata
-        
-        spo2Interval = setInterval(spo2Tick, UPDATE_INTERVAL);
+    function animateValueChange(element, start, end, duration) {
+        const startTime = performance.now();
+
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            const current = (start + (end - start) * easeProgress).toFixed(1);
+
+            element.textContent = current;
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    // ============================================
+    // API PÚBLICA
+    // ============================================
+
+    /**
+     * Obtiene el valor actual de SpO₂
+     * @returns {number} - SpO₂ actual
+     */
+    function getCurrentSpO2() {
+        return currentSpO2;
     }
 
     /**
-     * Detiene la simulación de lecturas de SpO₂
+     * Obtiene el historial de SpO₂
+     * @returns {Array} - Array de objetos {value, timestamp}
      */
-    function stopSpO2() {
+    function getSpO2History() {
+        return [...spo2History];
+    }
+
+    /**
+     * Actualiza el valor de SpO₂ (usado por el monitoreo continuo)
+     * @param {number} spo2 - Nuevo valor de SpO₂
+     */
+    function setSpO2(spo2) {
+        currentSpO2 = spo2;
+        updateSpO2Display(spo2);
+    }
+
+    /**
+     * Genera y actualiza un nuevo valor SpO₂
+     * @returns {number} - Nuevo valor generado
+     */
+    function generateNewSpO2() {
+        const newSpO2 = simulateSpO2Reading();
+        setSpO2(newSpO2);
+        return newSpO2;
+    }
+
+    /**
+     * Inicia la simulación automática de SpO₂
+     * @param {number} interval - Intervalo en ms (opcional)
+     */
+    function startSpO2Simulation(interval) {
+        const updateInterval = interval || SPO2_CONFIG.UPDATE_INTERVAL;
+
+        // Generar valor inicial
+        generateNewSpO2();
+
+        // Iniciar intervalo
+        if (spo2Interval) clearInterval(spo2Interval);
+        spo2Interval = setInterval(generateNewSpO2, updateInterval);
+    }
+
+    /**
+     * Detiene la simulación automática de SpO₂
+     */
+    function stopSpO2Simulation() {
         if (spo2Interval) {
             clearInterval(spo2Interval);
             spo2Interval = null;
         }
-        isRunning = false;
-        
-        // Resetear UI
-        spo2Value.textContent = '--';
-        spo2Status.textContent = 'Esperando datos...';
-        spo2Status.className = 'metric-status';
-        spo2Bar.style.width = '0%';
-        spo2Card.classList.remove('alert');
-        spo2Alert.classList.add('hidden');
-        spo2History = [];
     }
 
-    /**
-     * Actualiza el gráfico de historial de SpO₂ (segunda línea en canvas)
-     */
-    function updateSpO2Chart() {
-        const canvas = document.getElementById('historyChart');
-        if (!canvas || spo2History.length < 2) return;
-        
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-        
-        // No limpiamos, dibujamos sobre la línea de BPM ya existente
-        // Dibujar línea de SpO₂
-        ctx.beginPath();
-        ctx.strokeStyle = '#2563eb';
-        ctx.lineWidth = 2;
-        
-        spo2History.forEach((point, index) => {
-            const x = (index / (HISTORY_MAX_POINTS - 1)) * width;
-            const y = height - ((point.value / 100) * height);
-            
-            if (index === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        
-        ctx.stroke();
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+
+    // Inicializar mini chart vacío
+    if (spo2ChartEl) {
+        for (let i = 0; i < 10; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'mini-bar';
+            bar.style.height = '50%';
+            bar.style.backgroundColor = '#334155';
+            spo2ChartEl.appendChild(bar);
+        }
     }
 
-    // Escuchar eventos de sesión
-    window.addEventListener('userLoggedIn', startSpO2);
-    window.addEventListener('userLoggedOut', stopSpO2);
+    // Exponer API global
+    window.VitaMonitorSpO2 = {
+        getCurrentSpO2,
+        getSpO2History,
+        setSpO2,
+        generateNewSpO2,
+        startSpO2Simulation,
+        stopSpO2Simulation,
+        getSpO2Status,
+        CONFIG: SPO2_CONFIG
+    };
 
 })();
