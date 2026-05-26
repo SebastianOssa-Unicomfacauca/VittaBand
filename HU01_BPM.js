@@ -313,7 +313,7 @@
         }
     }
 
-    // Exponer API global
+    // Exponer API global ...
     window.VitaMonitorBPM = {
         getCurrentBPM,
         getBPMHistory,
