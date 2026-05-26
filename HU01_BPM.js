@@ -289,7 +289,7 @@
     }
 
     /**
-     * Detiene la simulación automática de BPM ...
+     * Detiene la simulación automática de BPM .......
      */
     function stopBPMSimulation() {
         if (bpmInterval) {
