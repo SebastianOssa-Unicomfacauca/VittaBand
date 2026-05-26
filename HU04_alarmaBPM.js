@@ -7,7 +7,7 @@
  * (menor a 30 o mayor a 220) y genera una alarma visual
  * inmediata con opción de simular notificación a familiares.
  * 
- * Criterios de aceptación:
+ * Criterios de aceptación:,
  * - Detectar BPM crítico (< 30 o > 220)
  * - Generar alarma visual inmediata
  * - Mostrar mensaje de emergencia

@@ -7,7 +7,7 @@
  * cuando el valor está fuera de rango.
  * 
  * Criterios de aceptación:
- * - Mostrar BPM en tiempo real
+ * - Mostrar, BPM en tiempo real
  * - Actualización automática
  * - NO recargar página
  * - Si BPM < 30 o BPM > 220: generar alerta
