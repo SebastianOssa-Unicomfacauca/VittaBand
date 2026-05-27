@@ -6,7 +6,7 @@
  * (BPM y SpO₂) en intervalos cortos, mostrando cambios inmediatos
  * sin recargar la página.
  * 
- * Criterios de aceptación: holaa isa
+ * Criterios de aceptación:
  * - Actualizar automáticamente BPM y SpO₂
  * - Intervalos cortos
  * - Mostrar cambios inmediatamente
