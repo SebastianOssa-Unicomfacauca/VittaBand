@@ -1,6 +1,6 @@
 /**
  * ============================================
- * HU02 - VISUALIZAR SpO₂ (Saturación de Oxígeno)
+ * HU02 - VISUALIZAR SpO₂ (Saturación de Oxígeno)fn
  * ============================================
  * Maneja la visualización de SpO₂ en tiempo real,
  * actualización automática y generación de alertas
