@@ -1,241 +1,328 @@
 /**
  * ============================================
- * HU01 - VISUALIZACIÓN BPM (Frecuencia Cardíaca)
+ * HU01 - VISUALIZAR BPM (Frecuencia Cardíaca).
  * ============================================
- * Módulo que simula la lectura de BPM en tiempo real.
- * Genera valores aleatorios dentro de rangos fisiológicos,
- * actualiza la UI cada segundo y genera alertas cuando
- * los valores están fuera del rango seguro (30-220 BPM).
+ * Maneja la visualización del BPM en tiempo real,
+ * actualización automática y generación de alertas
+ * cuando el valor está fuera de rango.
+ * 
+ * Criterios de aceptación:
+ * - Mostrar, BPM en tiempo real
+ * - Actualización automática
+ * - NO recargar página
+ * - Si BPM < 30 o BPM > 220: generar alerta
  */
-kjngfijaijg
+
 (function() {
     'use strict';
-//holaaaaa
-//Daniela
-    // Referencias DOM
-    const bpmValue = document.getElementById('bpmValue');
-    const bpmStatus = document.getElementById('bpmStatus');
-    const bpmBar = document.getElementById('bpmBar');
-    const bpmCard = document.getElementById('bpmCard');
-    const bpmAlert = document.getElementById('bpmAlert');
-    const bpmAlertText = document.getElementById('bpmAlertText');
 
-    // Estado del módulo
+    // ============================================
+    // CONFIGURACIÓN
+    // ============================================
+
+    const BPM_CONFIG = {
+        MIN_NORMAL: 60,
+        MAX_NORMAL: 100,
+        MIN_WARNING: 50,
+        MAX_WARNING: 120,
+        MIN_CRITICAL: 30,
+        MAX_CRITICAL: 220,
+        UPDATE_INTERVAL: 2000, // ms entre actualizaciones
+        HISTORY_LENGTH: 20      // Cantidad de valores históricos
+    };
+
+    // ============================================
+    // ESTADO
+    // ============================================
+
+    let currentBPM = 72;
+    let bpmHistory = [];
     let bpmInterval = null;
-    let isRunning = false;
-    let bpmHistory = []; // Historial para el gráfico
 
-    // Constantes de configuración
-    const UPDATE_INTERVAL = 1000; // 1 segundo
-    const MIN_NORMAL_BPM = 60;
-    const MAX_NORMAL_BPM = 100;
-    const MIN_ALERT_BPM = 30;   // Alerta si BPM < 30
-    const MAX_ALERT_BPM = 220;  // Alerta si BPM > 220
-    const HISTORY_MAX_POINTS = 20;
+    // ============================================
+    // REFERENCIAS DOM
+    // ============================================
+
+    const bpmValueEl = document.getElementById('bpm-value');
+    const bpmStatusEl = document.getElementById('bpm-status');
+    const bpmCardEl = document.getElementById('bpm-card');
+    const bpmChartEl = document.getElementById('bpm-chart');
+
+    // ============================================
+    // SIMULACIÓN DE SENSOR BPM
+    // ============================================
 
     /**
-     * Genera un valor de BPM simulado
-     * Usa distribución normal centrada en 75 BPM con variación realista
-     * @returns {number} - Valor BPM entero
+     * Genera un valor BPM aleatorio realista
+     * Basado en distribución normal centrada en 72 BPM
+     * Con probabilidad baja de generar valores críticos para demo
+     * @returns {number} - Valor BPM simulado
      */
-    function generateBPM() {
-        // Simulación realista: media 75, desviación estándar 15
-        // Ocasionalmente genera valores anormales para probar alertas (5% probabilidad)
-        const isAbnormal = Math.random() < 0.05;
-        
-        let bpm;
-        if (isAbnormal) {
-            // Generar valor fuera de rango para demostrar alertas
-            bpm = Math.random() < 0.5 
-                ? Math.floor(Math.random() * 25) + 5   // 5-30 (bradicardia extrema)
-                : Math.floor(Math.random() * 50) + 221; // 221-270 (taquicardia extrema)
-        } else {
-            // Valor normal con variación
-            const u1 = Math.random();
-            const u2 = Math.random();
-            const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-            bpm = Math.round(75 + z * 15);
+    function simulateBPMReading() {
+        // 95% de probabilidad: valor normal (50-130)
+        // 5% de probabilidad: valor crítico para demostración
+        const isCritical = Math.random() < 0.05;
+
+        if (isCritical) {
+            // Generar valor crítico (muy bajo o muy alto)
+            const isTooLow = Math.random() < 0.5;
+            if (isTooLow) {
+                return Math.floor(Math.random() * 25) + 5; // 5-30 BPM
+            } else {
+                return Math.floor(Math.random() * 50) + 221; // 221-270 BPM
+            }
         }
 
-        return Math.max(0, bpm); // Evitar negativos
+        // Valor normal con variación realista
+        const baseBPM = 72;
+        const variation = (Math.random() - 0.5) * 30; // ±15 BPM
+        const activitySpike = Math.random() < 0.1 ? (Math.random() * 20) : 0;
+
+        let bpm = Math.round(baseBPM + variation + activitySpike);
+
+        // Asegurar que esté en rango razonable si no es crítico
+        bpm = Math.max(35, Math.min(210, bpm));
+
+        return bpm;
     }
 
+    // ============================================
+    // ACTUALIZACIÓN DE UI
+    // ============================================
+
     /**
-     * Determina el estado del BPM y el color correspondiente
-     * @param {number} bpm - Valor actual de BPM
-     * @returns {Object} - {status, cssClass, message}
+     * Determina el estado del BPM según su valor
+     * @param {number} bpm - Valor de BPM
+     * @returns {string} - Estado: 'normal', 'warning', 'danger'
      */
     function getBPMStatus(bpm) {
-        if (bpm < MIN_ALERT_BPM) {
-            return {
-                status: 'danger',
-                cssClass: 'status-danger',
-                message: '⚠️ Bradicardia severa - ¡Atención médica urgente!'
-            };
+        if (bpm < BPM_CONFIG.MIN_CRITICAL || bpm > BPM_CONFIG.MAX_CRITICAL) {
+            return 'danger';
         }
-        if (bpm > MAX_ALERT_BPM) {
-            return {
-                status: 'danger',
-                cssClass: 'status-danger',
-                message: '⚠️ Taquicardia severa - ¡Atención médica urgente!'
-            };
+        if (bpm < BPM_CONFIG.MIN_WARNING || bpm > BPM_CONFIG.MAX_WARNING) {
+            return 'warning';
         }
-        if (bpm < MIN_NORMAL_BPM) {
-            return {
-                status: 'warning',
-                cssClass: 'status-warning',
-                message: '⚡ Bradicardia leve'
-            };
-        }
-        if (bpm > MAX_NORMAL_BPM) {
-            return {
-                status: 'warning',
-                cssClass: 'status-warning',
-                message: '⚡ Taquicardia leve'
-            };
-        }
-        return {
-            status: 'normal',
-            cssClass: 'status-normal',
-            message: '✅ Ritmo cardíaco normal'
-        };
+        return 'normal';
     }
 
     /**
-     * Calcula el porcentaje para la barra de progreso visual
-     * @param {number} bpm - Valor actual
-     * @returns {number} - Porcentaje (0-100)
-     */
-    function calculateBarPercentage(bpm) {
-        // Escala: 0 BPM = 0%, 250 BPM = 100%
-        const percentage = (bpm / 250) * 100;
-        return Math.min(100, Math.max(0, percentage));
-    }
-
-    /**
-     * Obtiene color para la barra según el estado
+     * Obtiene el texto descriptivo del estado
      * @param {string} status - Estado del BPM
-     * @returns {string} - Color CSS
+     * @returns {string} - Texto descriptivo
      */
-    function getBarColor(status) {
-        const colors = {
-            normal: '#10b981',   // verde
-            warning: '#f59e0b',  // amarillo
-            danger: '#ef4444'    // rojo
+    function getBPMStatusText(status) {
+        const texts = {
+            normal: 'Normal',
+            warning: 'Advertencia',
+            danger: '¡Emergencia!'
         };
-        return colors[status] || colors.normal;
+        return texts[status] || 'Desconocido';
     }
 
     /**
-     * Actualiza la interfaz de usuario con el nuevo valor de BPM
-     * @param {number} bpm - Valor actual
+     * Actualiza la tarjeta de BPM en el DOM
+     * @param {number} bpm - Valor actual de BPM
      */
-    function updateBPMUI(bpm) {
-        const statusInfo = getBPMStatus(bpm);
-        
-        // Actualizar valor numérico
-        bpmValue.textContent = bpm;
-        
-        // Actualizar estado textual
-        bpmStatus.textContent = statusInfo.message;
-        bpmStatus.className = 'metric-status ' + statusInfo.cssClass;
-        
-        // Actualizar barra visual
-        bpmBar.style.width = calculateBarPercentage(bpm) + '%';
-        bpmBar.style.backgroundColor = getBarColor(statusInfo.status);
-        
-        // Manejar alertas visuales
-        if (statusInfo.status === 'danger') {
-            bpmCard.classList.add('alert');
-            bpmAlert.classList.remove('hidden');
-            bpmAlertText.textContent = statusInfo.message;
-        } else {
-            bpmCard.classList.remove('alert');
-            bpmAlert.classList.add('hidden');
+    function updateBPMDisplay(bpm) {
+        if (!bpmValueEl) return;
+
+        // Animar el cambio de valor
+        animateValueChange(bpmValueEl, parseInt(bpmValueEl.textContent) || 0, bpm, 500);
+
+        // Actualizar estado visual
+        const status = getBPMStatus(bpm);
+        updateBPMStatusDisplay(status);
+
+        // Actualizar historial y mini chart
+        addBPMToHistory(bpm);
+        updateBPMMiniChart();
+    }
+
+    /**
+     * Actualiza el indicador de estado visual
+     * @param {string} status - Estado actual
+     */
+    function updateBPMStatusDisplay(status) {
+        if (!bpmStatusEl || !bpmCardEl) return;
+
+        const badge = bpmStatusEl.querySelector('.status-badge');
+        if (badge) {
+            badge.className = `status-badge ${status}`;
+            badge.textContent = getBPMStatusText(status);
         }
 
-        // Guardar en historial para gráfico
-        bpmHistory.push({ value: bpm, timestamp: Date.now() });
-        if (bpmHistory.length > HISTORY_MAX_POINTS) {
+        // Actualizar clase de la tarjeta para el borde superior
+        bpmCardEl.classList.remove('normal', 'warning', 'danger');
+        bpmCardEl.classList.add(status);
+    }
+
+    /**
+     * Agrega un valor al historial de BPM
+     * @param {number} bpm - Valor a agregar
+     */
+    function addBPMToHistory(bpm) {
+        bpmHistory.push({
+            value: bpm,
+            timestamp: Date.now()
+        });
+
+        // Mantener solo los últimos N valores
+        if (bpmHistory.length > BPM_CONFIG.HISTORY_LENGTH) {
             bpmHistory.shift();
         }
-
-        // Actualizar gráfico si existe
-        updateChart();
     }
 
     /**
-     * Ciclo principal: genera y muestra nuevo valor de BPM
+     * Actualiza el mini chart de barras en la tarjeta BPM
      */
-    function bpmTick() {
-        const currentBPM = generateBPM();
-        updateBPMUI(currentBPM);
+    function updateBPMMiniChart() {
+        if (!bpmChartEl) return;
+
+        // Limpiar chart actual
+        bpmChartEl.innerHTML = '';
+
+        // Crear barras para cada valor histórico
+        bpmHistory.forEach((data, index) => {
+            const bar = document.createElement('div');
+            bar.className = 'mini-bar';
+
+            // Altura proporcional al valor (escala: 30-220 BPM -> 10%-100%)
+            const heightPercent = Math.max(10, Math.min(100, 
+                ((data.value - 30) / (220 - 30)) * 100
+            ));
+
+            bar.style.height = `${heightPercent}%`;
+
+            // Color según estado
+            const status = getBPMStatus(data.value);
+            const colors = {
+                normal: '#10b981',
+                warning: '#f59e0b',
+                danger: '#ef4444'
+            };
+            bar.style.backgroundColor = colors[status];
+
+            bpmChartEl.appendChild(bar);
+        });
     }
 
     /**
-     * Inicia la simulación de lecturas de BPM
+     * Anima el cambio de un valor numérico
+     * @param {HTMLElement} element - Elemento a animar
+     * @param {number} start - Valor inicial
+     * @param {number} end - Valor final
+     * @param {number} duration - Duración en ms
      */
-    function startBPM() {
-        if (isRunning) return;
-        
-        isRunning = true;
-        bpmTick(); // Primera lectura inmediata
-        
-        // Actualizaciones periódicas
-        bpmInterval = setInterval(bpmTick, UPDATE_INTERVAL);
+    function animateValueChange(element, start, end, duration) {
+        const startTime = performance.now();
+
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing suave
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(start + (end - start) * easeProgress);
+
+            element.textContent = current;
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    // ============================================
+    // API PÚBLICA
+    // ============================================
+
+    /**
+     * Obtiene el valor actual de BPM
+     * @returns {number} - BPM actual
+     */
+    function getCurrentBPM() {
+        return currentBPM;
     }
 
     /**
-     * Detiene la simulación de lecturas de BPM
+     * Obtiene el historial de BPM
+     * @returns {Array} - Array de objetos {value, timestamp}
      */
-    function stopBPM() {
+    function getBPMHistory() {
+        return [...bpmHistory];
+    }
+
+    /**
+     * Actualiza el valor de BPM (usado por el monitoreo continuo)
+     * @param {number} bpm - Nuevo valor de BPM
+     */
+    function setBPM(bpm) {
+        currentBPM = bpm;
+        updateBPMDisplay(bpm);
+    }
+
+    /**
+     * Genera y actualiza un nuevo valor BPM
+     * @returns {number} - Nuevo valor generado
+     */
+    function generateNewBPM() {
+        const newBPM = simulateBPMReading();
+        setBPM(newBPM);
+        return newBPM;
+    }
+
+    /**
+     * Inicia la simulación automática de BPM
+     * @param {number} interval - Intervalo en ms (opcional)
+     */
+    function startBPMSimulation(interval) {
+        const updateInterval = interval || BPM_CONFIG.UPDATE_INTERVAL;
+
+        // Generar valor inicial
+        generateNewBPM();
+
+        // Iniciar intervalo
+        if (bpmInterval) clearInterval(bpmInterval);
+        bpmInterval = setInterval(generateNewBPM, updateInterval);
+    }
+
+    /**
+     * Detiene la simulación automática de BPM
+     */
+    function stopBPMSimulation() {
         if (bpmInterval) {
             clearInterval(bpmInterval);
             bpmInterval = null;
         }
-        isRunning = false;
-        
-        // Resetear UI
-        bpmValue.textContent = '--';
-        bpmStatus.textContent = 'Esperando datos...';
-        bpmStatus.className = 'metric-status';
-        bpmBar.style.width = '0%';
-        bpmCard.classList.remove('alert');
-        bpmAlert.classList.add('hidden');
-        bpmHistory = [];
     }
 
-    /**
-     * Actualiza el gráfico de historial (canvas)
-     */
-    function updateChart() {
-        const canvas = document.getElementById('historyChart');
-        if (!canvas || bpmHistory.length < 2) return;
-        
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width = canvas.offsetWidth;
-        const height = canvas.height = canvas.offsetHeight;
-        
-        ctx.clearRect(0, 0, width, height);
-        
-        // Dibujar línea de BPM
-        ctx.beginPath();
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 2;
-        
-        bpmHistory.forEach((point, index) => {
-            const x = (index / (HISTORY_MAX_POINTS - 1)) * width;
-            const y = height - ((point.value / 250) * height);
-            
-            if (index === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        
-        ctx.stroke();
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+
+    // Inicializar mini chart vacío
+    if (bpmChartEl) {
+        for (let i = 0; i < 10; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'mini-bar';
+            bar.style.height = '20%';
+            bar.style.backgroundColor = '#334155';
+            bpmChartEl.appendChild(bar);
+        }
     }
 
-    // Escuchar eventos de sesión
-    window.addEventListener('userLoggedIn', startBPM);
-    window.addEventListener('userLoggedOut', stopBPM);
+    // Exponer API global
+    window.VitaMonitorBPM = {
+        getCurrentBPM,
+        getBPMHistory,
+        setBPM,
+        generateNewBPM,
+        startBPMSimulation,
+        stopBPMSimulation,
+        getBPMStatus,
+        CONFIG: BPM_CONFIG
+    };
 
 })();
