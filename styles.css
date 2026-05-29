@@ -1,5 +1,5 @@
 
-/* Reset y Base, */
+/* Reset y Base */
 *, *::before, *::after {
     margin: 0;
     padding: 0;
@@ -20,7 +20,7 @@
     --danger: #ef4444;
     --danger-bg: #fee2e2;
 
-    /* BPM y SpO2 específicos, */
+    /* BPM y SpO2 específicos */
     --bpm-color: #ef4444;
     --spo2-color: #3b82f6;
 

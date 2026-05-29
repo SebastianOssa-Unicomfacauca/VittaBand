@@ -1,13 +1,13 @@
 /**
  * ============================================
- * HU01 - VISUALIZAR BPM (Frecuencia Cardíaca).
+ * HU01 - VISUALIZAR BPM (Frecuencia Cardíaca)
  * ============================================
  * Maneja la visualización del BPM en tiempo real,
  * actualización automática y generación de alertas
  * cuando el valor está fuera de rango.
  * 
  * Criterios de aceptación:
- * - Mostrar, BPM en tiempo real
+ * - Mostrar BPM en tiempo real
  * - Actualización automática
  * - NO recargar página
  * - Si BPM < 30 o BPM > 220: generar alerta
