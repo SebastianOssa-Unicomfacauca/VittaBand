@@ -1,159 +1,186 @@
 /**
  * ============================================
- * HU45 - REGISTRO DE USUARIO
+ * HU46 - INICIO DE SESIÓN
  * ============================================
- * Maneja el formulario de registro, validación de datos
- * y almacenamiento simulado en localStorage.
+ * Maneja el formulario de login, validación de credenciales
+ * y redirección al dashboard principal.
  * 
  * Criterios de aceptación:
- * - Registrar nombre, correo y contraseña
- * - Validar campos vacíos
- * - Validar formato de correo
- * - Guardar usuario en localStorage
- * - Permitir luego iniciar sesión
+ * - Permitir login con correo y contraseña
+ * - Validar credenciales
+ * - Mostrar "Correo o contraseña incorrectos"
+ * - Redirigir al HOME si el login es correcto
  */
 
 (function() {
     'use strict';
 
     // Referencias DOM
-    const registerForm = document.getElementById('register-form');
-    const regNameInput = document.getElementById('reg-name');
-    const regEmailInput = document.getElementById('reg-email');
-    const regPasswordInput = document.getElementById('reg-password');
-    const showLoginLink = document.getElementById('show-login');
-
-    // Referencias a mensajes de error
-    const nameError = document.getElementById('reg-name-error');
-    const emailError = document.getElementById('reg-email-error');
-    const passwordError = document.getElementById('reg-password-error');
+    const loginForm = document.getElementById('login-form');
+    const loginEmailInput = document.getElementById('login-email');
+    const loginPasswordInput = document.getElementById('login-password');
+    const loginErrorBanner = document.getElementById('login-error');
+    const showRegisterLink = document.getElementById('show-register');
+    const logoutBtn = document.getElementById('logout-btn');
 
     // ============================================
-    // VALIDACIONES
+    // AUTENTICACIÓN
     // ============================================
 
     /**
-     * Valida que el campo no esté vacío
-     * @param {string} value - Valor a validar
-     * @returns {boolean} - true si no está vacío
+     * Busca un usuario por correo y contraseña
+     * @param {string} email - Correo electrónico
+     * @param {string} password - Contraseña
+     * @returns {Object|null} - Usuario encontrado o null
      */
-    function isNotEmpty(value) {
-        return value.trim().length > 0;
-    }
-
-    /**
-     * Valida formato de correo electrónico
-     * @param {string} email - Correo a validar
-     * @returns {boolean} - true si el formato es válido
-     */
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email.trim());
-    }
-
-    /**
-     * Valida longitud mínima de contraseña
-     * @param {string} password - Contraseña a validar
-     * @returns {boolean} - true si cumple longitud mínima
-     */
-    function isValidPassword(password) {
-        return password.length >= 6;
-    }
-
-    /**
-     * Muestra mensaje de error en un campo específico
-     * @param {HTMLElement} input - Input con error
-     * @param {HTMLElement} errorElement - Elemento donde mostrar error
-     * @param {string} message - Mensaje de error
-     */
-    function showFieldError(input, errorElement, message) {
-        input.classList.add('error');
-        errorElement.textContent = message;
-    }
-
-    /**
-     * Limpia el estado de error de un campo
-     * @param {HTMLElement} input - Input a limpiar
-     * @param {HTMLElement} errorElement - Elemento de error a limpiar
-     */
-    function clearFieldError(input, errorElement) {
-        input.classList.remove('error');
-        errorElement.textContent = '';
-    }
-
-    /**
-     * Limpia todos los errores del formulario
-     */
-    function clearAllErrors() {
-        clearFieldError(regNameInput, nameError);
-        clearFieldError(regEmailInput, emailError);
-        clearFieldError(regPasswordInput, passwordError);
-    }
-
-    // ============================================
-    // ALMACENAMIENTO
-    // ============================================
-
-    /**
-     * Verifica si un usuario ya existe por correo
-     * @param {string} email - Correo a buscar
-     * @returns {boolean} - true si ya existe
-     */
-    function userExists(email) {
+    function authenticateUser(email, password) {
         try {
             const users = JSON.parse(localStorage.getItem('vitamonitor_users')) || [];
-            return users.some(user => user.email === email.trim().toLowerCase());
+            const normalizedEmail = email.trim().toLowerCase();
+
+            return users.find(user => 
+                user.email === normalizedEmail && 
+                user.password === password
+            ) || null;
         } catch (error) {
-            console.error('Error al verificar usuario existente:', error);
-            return false;
+            console.error('Error al autenticar usuario:', error);
+            return null;
         }
     }
 
     /**
-     * Guarda un nuevo usuario en localStorage
-     * @param {Object} userData - Datos del usuario
-     * @returns {boolean} - true si se guardó correctamente
+     * Guarda la sesión activa en localStorage
+     * @param {Object} user - Datos del usuario autenticado
      */
-    function saveUser(userData) {
+    function setActiveSession(user) {
         try {
-            const users = JSON.parse(localStorage.getItem('vitamonitor_users')) || [];
-
-            // Agregar nuevo usuario con ID y fecha de registro
-            const newUser = {
-                id: Date.now().toString(),
-                name: userData.name.trim(),
-                email: userData.email.trim().toLowerCase(),
-                password: userData.password, // En producción: usar hash
-                createdAt: new Date().toISOString()
+            const sessionData = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                loginTime: new Date().toISOString()
             };
-
-            users.push(newUser);
-            localStorage.setItem('vitamonitor_users', JSON.stringify(users));
-
-            return true;
+            localStorage.setItem('vitamonitor_session', JSON.stringify(sessionData));
         } catch (error) {
-            console.error('Error al guardar usuario:', error);
-            return false;
+            console.error('Error al guardar sesión:', error);
+        }
+    }
+
+    /**
+     * Obtiene la sesión activa si existe
+     * @returns {Object|null} - Datos de sesión o null
+     */
+    function getActiveSession() {
+        try {
+            const session = localStorage.getItem('vitamonitor_session');
+            return session ? JSON.parse(session) : null;
+        } catch (error) {
+            console.error('Error al obtener sesión:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Cierra la sesión activa
+     */
+    function clearSession() {
+        try {
+            localStorage.removeItem('vitamonitor_session');
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
         }
     }
 
     // ============================================
-    // NAVEGACIÓN ENTRE PANTALLAS
+    // NAVEGACIÓN
     // ============================================
 
     /**
-     * Muestra la pantalla de login y oculta registro
+     * Muestra el dashboard y oculta pantallas de auth
+     * @param {Object} user - Datos del usuario
+     */
+    function showDashboard(user) {
+        const loginScreen = document.getElementById('login-screen');
+        const registerScreen = document.getElementById('register-screen');
+        const dashboard = document.getElementById('dashboard');
+
+        // Ocultar pantallas de autenticación
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (registerScreen) registerScreen.classList.add('hidden');
+
+        // Mostrar dashboard
+        if (dashboard) {
+            dashboard.classList.remove('hidden');
+            // Actualizar info del usuario en el header
+            updateUserInfo(user);
+        }
+
+        // Iniciar el monitoreo de signos vitales
+        if (window.VitaMonitor && window.VitaMonitor.startMonitoring) {
+            window.VitaMonitor.startMonitoring();
+        }
+    }
+
+    /**
+     * Muestra la pantalla de login
      */
     function showLoginScreen() {
-        const registerScreen = document.getElementById('register-screen');
         const loginScreen = document.getElementById('login-screen');
+        const registerScreen = document.getElementById('register-screen');
+        const dashboard = document.getElementById('dashboard');
 
-        registerScreen.classList.add('hidden');
-        loginScreen.classList.remove('hidden');
+        if (dashboard) dashboard.classList.add('hidden');
+        if (registerScreen) registerScreen.classList.add('hidden');
+        if (loginScreen) loginScreen.classList.remove('hidden');
 
-        // Limpiar formulario de registro
-        registerForm.reset();
-        clearAllErrors();
+        // Limpiar formulario
+        if (loginForm) loginForm.reset();
+        hideLoginError();
+    }
+
+    /**
+     * Muestra la pantalla de registro
+     */
+    function showRegisterScreen() {
+        const loginScreen = document.getElementById('login-screen');
+        const registerScreen = document.getElementById('register-screen');
+
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (registerScreen) registerScreen.classList.remove('hidden');
+    }
+
+    /**
+     * Actualiza la información del usuario en el header
+     * @param {Object} user - Datos del usuario
+     */
+    function updateUserInfo(user) {
+        const userNameEl = document.getElementById('user-name');
+        const userEmailEl = document.getElementById('user-email');
+
+        if (userNameEl) userNameEl.textContent = user.name || 'Usuario';
+        if (userEmailEl) userEmailEl.textContent = user.email || '';
+    }
+
+    // ============================================
+    // MANEJO DE ERRORES
+    // ============================================
+
+    /**
+     * Muestra el banner de error de login
+     */
+    function showLoginError() {
+        if (loginErrorBanner) {
+            loginErrorBanner.classList.add('visible');
+        }
+    }
+
+    /**
+     * Oculta el banner de error de login
+     */
+    function hideLoginError() {
+        if (loginErrorBanner) {
+            loginErrorBanner.classList.remove('visible');
+        }
     }
 
     // ============================================
@@ -161,147 +188,110 @@
     // ============================================
 
     /**
-     * Maneja el envío del formulario de registro
+     * Maneja el envío del formulario de login
      * @param {Event} event - Evento de submit
      */
-    function handleRegisterSubmit(event) {
+    function handleLoginSubmit(event) {
         event.preventDefault();
-        clearAllErrors();
+        hideLoginError();
 
-        const name = regNameInput.value;
-        const email = regEmailInput.value;
-        const password = regPasswordInput.value;
+        const email = loginEmailInput.value.trim();
+        const password = loginPasswordInput.value;
 
-        let hasErrors = false;
-
-        // Validar nombre
-        if (!isNotEmpty(name)) {
-            showFieldError(regNameInput, nameError, 'El nombre es obligatorio');
-            hasErrors = true;
-        }
-
-        // Validar correo
-        if (!isNotEmpty(email)) {
-            showFieldError(regEmailInput, emailError, 'El correo es obligatorio');
-            hasErrors = true;
-        } else if (!isValidEmail(email)) {
-            showFieldError(regEmailInput, emailError, 'Ingresa un correo válido');
-            hasErrors = true;
-        } else if (userExists(email)) {
-            showFieldError(regEmailInput, emailError, 'Este correo ya está registrado');
-            hasErrors = true;
-        }
-
-        // Validar contraseña
-        if (!isNotEmpty(password)) {
-            showFieldError(regPasswordInput, passwordError, 'La contraseña es obligatoria');
-            hasErrors = true;
-        } else if (!isValidPassword(password)) {
-            showFieldError(regPasswordInput, passwordError, 'Mínimo 6 caracteres');
-            hasErrors = true;
-        }
-
-        // Si hay errores, detener
-        if (hasErrors) {
+        // Validar campos no vacíos
+        if (!email || !password) {
+            showLoginError();
             return;
         }
 
-        // Guardar usuario
-        const success = saveUser({ name, email, password });
+        // Autenticar usuario
+        const user = authenticateUser(email, password);
 
-        if (success) {
-            // Mostrar mensaje de éxito y redirigir a login
-            showToast('Registro exitoso. Ahora puedes iniciar sesión.', 'success');
-            setTimeout(() => {
-                showLoginScreen();
-            }, 1500);
+        if (user) {
+            // Login exitoso
+            setActiveSession(user);
+            showDashboard(user);
+            showToast(`Bienvenido, ${user.name}`, 'success');
         } else {
-            showToast('Error al registrar. Intenta de nuevo.', 'error');
+            // Credenciales incorrectas
+            showLoginError();
+            // Limpiar contraseña para reintento
+            if (loginPasswordInput) loginPasswordInput.value = '';
+            if (loginPasswordInput) loginPasswordInput.focus();
         }
     }
 
     /**
-     * Maneja la visualización de contraseña
-     * @param {Event} event - Evento de click
+     * Maneja el cierre de sesión
      */
-    function handleTogglePassword(event) {
-        const button = event.currentTarget;
-        const targetId = button.getAttribute('data-target');
-        const input = document.getElementById(targetId);
-        const icon = button.querySelector('i');
+    function handleLogout() {
+        clearSession();
 
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
+        // Detener monitoreo
+        if (window.VitaMonitor && window.VitaMonitor.stopMonitoring) {
+            window.VitaMonitor.stopMonitoring();
         }
+
+        showLoginScreen();
+        showToast('Sesión cerrada correctamente', 'info');
     }
 
     // ============================================
     // INICIALIZACIÓN
     // ============================================
 
-    // Evento de registro
-    if (registerForm) {
-        registerForm.addEventListener('submit', handleRegisterSubmit);
+    // Evento de login
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLoginSubmit);
     }
 
-    // Navegación a login
-    if (showLoginLink) {
-        showLoginLink.addEventListener('click', function(event) {
+    // Navegación a registro
+    if (showRegisterLink) {
+        showRegisterLink.addEventListener('click', function(event) {
             event.preventDefault();
-            showLoginScreen();
+            showRegisterScreen();
         });
     }
 
-    // Toggle de contraseña
-    document.querySelectorAll('.toggle-password').forEach(button => {
-        button.addEventListener('click', handleTogglePassword);
-    });
+    // Cerrar sesión
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 
-    // Limpiar errores al escribir
-    [regNameInput, regEmailInput, regPasswordInput].forEach(input => {
-        if (input) {
-            input.addEventListener('input', function() {
-                this.classList.remove('error');
-                const errorEl = document.getElementById(this.id + '-error');
-                if (errorEl) errorEl.textContent = '';
-            });
+    // Limpiar error al escribir
+    if (loginEmailInput) {
+        loginEmailInput.addEventListener('input', hideLoginError);
+    }
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('input', hideLoginError);
+    }
+
+    // ============================================
+    // AUTO-LOGIN (sesión persistente)
+    // ============================================
+
+    /**
+     * Verifica si hay una sesión activa al cargar la página
+     */
+    function checkActiveSession() {
+        const session = getActiveSession();
+        if (session) {
+            // Restaurar sesión y mostrar dashboard
+            showDashboard(session);
         }
+    }
+
+    // Verificar sesión al cargar (con pequeño delay para asegurar que DOM esté listo)
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(checkActiveSession, 100);
     });
 
-    // ============================================
-    // FUNCIÓN GLOBAL DE TOAST (compartida)
-    // ============================================
-    window.showToast = function(message, type = 'info') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-
-        const icons = {
-            success: 'fa-circle-check',
-            error: 'fa-circle-xmark',
-            info: 'fa-circle-info'
-        };
-
-        toast.innerHTML = `
-            <i class="fa-solid ${icons[type] || icons.info}"></i>
-            <span>${message}</span>
-        `;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(30px)';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+    // Exponer funciones útiles globalmente
+    window.VitaMonitorAuth = {
+        showLoginScreen,
+        showDashboard,
+        getActiveSession,
+        clearSession
     };
 
 })();
